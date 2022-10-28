@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	async "github.com/FarmbotSimulator/FarmbotSessionManager/src/async"
@@ -66,22 +67,76 @@ func setUserEnv(botId string, body []interface{}) {
 func processRpcRequests(client mqtt_.Client, botId string, messages []interface{}, args map[string]interface{}) {
 	for _, message := range messages {
 		kind := message.(map[string]interface{})["kind"]
-		fmt.Println(message)
 		switch kind {
 		case "set_user_env":
 			setUserEnv(botId, message.(map[string]interface{})["body"].([]interface{}))
 			publishFromDevice(client, botId, args)
 			break
 		case "move_absolute":
-			fmt.Println("ABSOLUTE")
-			moveAbsolute(message.(map[string]interface{})["args"], args)
+			moveAbsoluteRelative(client, botId, message.(map[string]interface{})["args"].(map[string]interface{}), "absolute")
 			break
 		case "move_relative":
-			fmt.Println("RELATIVE")
-			// moveRelative(message.(map[string]interface{})["args"], args)
+			moveAbsoluteRelative(client, botId, message.(map[string]interface{})["args"].(map[string]interface{}), "relative")
 			break
 		}
 	}
+}
+
+func moveAbsoluteRelative(client mqtt_.Client, botId string, position map[string]interface{}, moveType string) {
+	locationData := make(map[string]interface{})
+	if moveType == "absolute" {
+		locationData = position["location"].(map[string]interface{})["args"].(map[string]interface{})
+	} else {
+		locationData = position
+	}
+
+	x := float32(locationData["x"].(float64))
+	y := float32(locationData["y"].(float64))
+	z := float32(locationData["z"].(float64))
+	speed := float32(position["speed"].(float64))
+
+	logDataStr := `{
+		"channels": [],
+		"created_at": "new Date().getTime().toString().slice(0, 10)",
+		"major_version": 10,
+		"message": "Farmbot is up and running!",
+		"meta": {
+			"assertion_passed": null,
+			"assertion_type": null
+		},
+		"minor_version": 1,
+		"patch_version": 4,
+		"type": "success",
+		"verbosity": 1,
+		"x": "this.location.x",
+		"y": "this.location.y",
+		"z": "this.location.z"
+	}`
+	var logData map[string]interface{}
+	json.Unmarshal([]byte(logDataStr), &logData)
+	logData["created_at"] = fmt.Sprintf("%v", time.Now().Unix())
+	if moveType == "absolute" {
+		logData["message"] = fmt.Sprintf("Moving to (%f,%f,%f)", x, y, z)
+	} else {
+		logData["message"] = fmt.Sprintf("Moving relative to (%f,%f,%f)", x, y, z)
+	}
+	logData["x"] = botStatus[botId].(map[string]float32)["x"]
+	logData["y"] = botStatus[botId].(map[string]float32)["y"]
+	logData["z"] = botStatus[botId].(map[string]float32)["z"]
+	publishGeneralData(client, botId, logData, "logs")
+
+	tmpData := map[string]float32{
+		"speed": speed,
+		"x":     x,
+		"y":     y,
+		"z":     z,
+	}
+	tmp, _ := json.Marshal(tmpData)
+	topic := fmt.Sprintf("/simulator/%s/move_relative", botId)
+	if moveType == "absolute" {
+		topic = fmt.Sprintf("/simulator/%s/move_absolute", botId)
+	}
+	server.Publish(topic, tmp, false)
 }
 
 /**
@@ -351,12 +406,15 @@ func publishStatusMessage(client mqtt_.Client, botId string) {
 			"camera": "\"USB\""
 		}
 	}`
+	var mutex = &sync.RWMutex{}
 	var statusData map[string]interface{}
 	json.Unmarshal([]byte(statusDataStr), &statusData)
+	mutex.RLock()
 	statusData["informational_settings"].(map[string]interface{})["uptime"] = uptime[botId]
 	statusData["location_data"].(map[string]interface{})["position"].(map[string]interface{})["x"] = botStatus[botId].(map[string]float32)["x"]
 	statusData["location_data"].(map[string]interface{})["position"].(map[string]interface{})["y"] = botStatus[botId].(map[string]float32)["y"]
 	statusData["location_data"].(map[string]interface{})["position"].(map[string]interface{})["z"] = botStatus[botId].(map[string]float32)["z"]
+	mutex.RUnlock()
 	LAST_CLIENT_CONNECTED := "2020-08-25T06:28:44.168Z"
 	if userEnv[botId] != nil {
 		if userEnv[botId].(map[string]interface{})["LAST_CLIENT_CONNECTED"] != nil {

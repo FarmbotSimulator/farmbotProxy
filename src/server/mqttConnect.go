@@ -48,6 +48,7 @@ var farmbotConnections map[string]string
 var allowedTopics map[string][]string
 var botStatus map[string]interface{}
 var FARMBOTURL string
+var server *mqtt.Server
 
 func mqttConnect() {
 	botStatus = make(map[string]interface{})
@@ -73,7 +74,7 @@ func mqttConnect() {
 
 	fmt.Println(aurora.Magenta("Mochi MQTT Server initializing..."), aurora.Cyan("TCP"))
 
-	server := mqtt.NewServer(nil)
+	server = mqtt.NewServer(nil)
 	tcp := listeners.NewTCP("t1", ":1883")
 	err := server.AddListener(tcp, &listeners.Config{
 		// Auth: new(auth.Allow),
@@ -223,21 +224,26 @@ func mqttConnect() {
 		// check. Work this well
 		topic := pk.TopicName
 		topicPart := ""
-		// forward client to simulator
-		r, _ := regexp.Compile(`^/client`)
-		for _, match := range r.FindStringSubmatch(topic) {
-			match = strings.Replace(match, `/`+string(cl.Username)+"/", "", -1)
-			match = strings.Replace(match, `/`, "", -1)
-			topicPart = match
-		}
-		// fmt.Println("topicPart")
-		// fmt.Println(topicPart)
-		// fmt.Println(strings.Replace(topic, "/client", "/simulator", 1))
-		if topicPart != "" {
-			server.Publish(strings.Replace(topic, "/client", "/simulator", 1), pk.Payload, false)
-		}
+		// // forward client to simulator
+		// r, _ := regexp.Compile(`^/client`)
+		// for _, match := range r.FindStringSubmatch(topic) {
+		// 	match = strings.Replace(match, `/`+string(cl.Username)+"/", "", -1)
+		// 	match = strings.Replace(match, `/`, "", -1)
+		// 	topicPart = match
+		// 	server.Publish(strings.Replace(topic, "/client", "/simulator", 1), pk.Payload, false)
+		// 	return
+		// }
+		// // forward simulator to client
+		// r, _ = regexp.Compile(`^/client`)
+		// for _, match := range r.FindStringSubmatch(topic) {
+		// 	match = strings.Replace(match, `/`+string(cl.Username)+"/", "", -1)
+		// 	match = strings.Replace(match, `/`, "", -1)
+		// 	topicPart = match
+		// 	server.Publish(strings.Replace(topic, "/client", "/simulator", 1), pk.Payload, false)
+		// 	return
+		// }
 
-		r, _ = regexp.Compile(`^[/]` + string(cl.Username) + `/[^/]+[/]?`) // has either a slash at the end or nothing more
+		r, _ := regexp.Compile(`^[/]` + string(cl.Username) + `/[^/]+[/]?`) // has either a slash at the end or nothing more
 		for _, match := range r.FindStringSubmatch(topic) {
 			match = strings.Replace(match, `/`+string(cl.Username)+"/", "", -1)
 			match = strings.Replace(match, `/`, "", -1)
@@ -248,8 +254,8 @@ func mqttConnect() {
 			if resp, err := farmbot.Get(string(pk.Payload), tokens[string(cl.Username)]); err != nil {
 
 			} else {
-				fmt.Println(resp.(string))
-				server.Publish(topic, []byte(resp.(string)), false)
+				// fmt.Println(resp.(string))
+				server.Publish(strings.Replace(topic, "GET", fmt.Sprintf("SET/%s", string(pk.Payload)), -1), []byte(resp.(string)), false)
 			}
 			break
 		}
