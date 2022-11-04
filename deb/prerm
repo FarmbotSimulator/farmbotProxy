@@ -1,0 +1,9 @@
+#!/bin/bash
+
+farmbotproxy stop -p
+rm /etc/systemd/system/farmbotproxy.service
+systemctl daemon-reload
+
+farmbotproxy stop
+rm /etc/systemd/system/farmbotproxyDev.service
+systemctl daemon-reload

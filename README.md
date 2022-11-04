@@ -107,16 +107,30 @@ To run the program:
 go run . run
 ```
 
+To create the .deb files
+```
+make debs
+```
+
 You can also start the service. But we do not recommed that you do this in development. If you desire to do this, you can refer to [Installation](#Installation) below.
 
 **[⬆ back home](#table-of-contents)**
 ## Installation
-```
+
+Download the relevant file for your system from [releases][https://github.com/FarmbotSimulator/farmbotProxy/releases/tag/v1.0]
 
 ```
-
+curl --silent "https://api.github.com/repos/FarmbotSimulator/farmbotProxy/releases/latest"|   grep "browser_download_url.*amd64.deb" | head -n 1 | cut -d : -f 2,3 | tr -d \"  | xargs wget -O tmp.deb && sudo dpkg -i tmp.deb
+```
+If all things go well you should have the service running:
+```
+sudo systemctl status farmbotproxy
+``
 
 **[⬆ back home](#table-of-contents)**
+
+## Todo
+- [ ] Reading version from config when packaging
 
 ## References
 - [Creating .deb](https://www.internalpointers.com/post/build-binary-deb-package-practical-guide)
