@@ -1,0 +1,7 @@
+Package: farmbotProxy
+Version: 1.0
+Architecture: amd64
+Maintainer: Brian Onang'o <surgbc@gmail.com>
+Description: An mqtt proxy broker for farmbot.
+ This proxy server creates a persistent connection to the farmbot server so that there is no need for reconnection every time a client connects. It also hands the publishing of certain data such as logs, etc. This behaviour is especially important when developing applications that require an mqtt connection to the farmbot server/broker. If bugs occur, for instance, the application may be restarted several times during debugging and this may result in it exceeding the rate limit and getting locked out for sometime, thus wasting a lot of time. This proxy broker solves this problem.
+ 

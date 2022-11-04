@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/FarmbotSimulator/FarmbotSessionManager/cmd"
+	"github.com/FarmbotSimulator/farmbotProxy/cmd"
 )
 
 func main() {

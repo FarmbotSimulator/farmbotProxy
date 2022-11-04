@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/FarmbotSimulator/FarmbotSessionManager/config"
-	"github.com/FarmbotSimulator/FarmbotSessionManager/src/systemd"
+	"github.com/FarmbotSimulator/farmbotProxy/config"
+	"github.com/FarmbotSimulator/farmbotProxy/src/systemd"
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +13,7 @@ var initCmd = &cobra.Command{
 	Long: `Create service and config files. Requires sudo
 Will overwrite service file if exists, but will not overwrite config files if exist unless the -f flag is supplied.
 
-Location for config files is in /etc/farmbotsimulator/farmbotsimulator.yaml
+Location for config files is in /etc/farmbotproxy/farmbotproxy.yaml
 
 `,
 	Run: func(cmd *cobra.Command, args []string) {

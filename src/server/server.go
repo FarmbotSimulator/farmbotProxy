@@ -1,6 +1,6 @@
 package server
 
-// _ "github.com/FarmbotSimulator/FarmbotSessionManager/docs"
+// _ "github.com/FarmbotSimulator/farmbotProxy/docs"
 
 func Start(production bool) {
 	startMQTT()

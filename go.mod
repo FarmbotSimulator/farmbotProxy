@@ -1,4 +1,4 @@
-module github.com/FarmbotSimulator/FarmbotSessionManager
+module github.com/FarmbotSimulator/farmbotProxy
 
 go 1.18
 

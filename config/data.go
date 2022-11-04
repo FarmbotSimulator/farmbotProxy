@@ -4,7 +4,7 @@ const version = "1.0"
 
 var defaultConfig = `
 FARMBOTURL: "https://my.farmbot.io/api"
-siteTitle: "Farmbot Simulator"
+siteTitle: "Farmbot Proxy"
 sshKey: ~/.ssh/gitkey
 PORT: 
   dev: 8001
@@ -70,12 +70,12 @@ mailer:
         
 service:
   prod:
-    name: farmbotsimulator
-    displayname: "Farmbot Simulator"
-    description: "Farmbot Simulator"
+    name: farmbotproxy
+    displayname: "Farmbot Proxy"
+    description: "Farmbot Proxy"
   dev:
-    name: farmbotsimulatorDev
-    displayname: "Farmbot Simulator Dev env"
-    description: "Farmbot Simulator in Dev env"
+    name: farmbotproxyDev
+    displayname: "Farmbot Proxy Dev env"
+    description: "Farmbot Proxy in Dev env"
   
 `

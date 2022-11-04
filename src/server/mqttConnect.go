@@ -33,9 +33,9 @@ import (
 	mqtt_ "github.com/eclipse/paho.mqtt.golang"
 	"github.com/logrusorgru/aurora"
 
-	"github.com/FarmbotSimulator/FarmbotSessionManager/config"
-	async "github.com/FarmbotSimulator/FarmbotSessionManager/src/async"
-	"github.com/FarmbotSimulator/FarmbotSessionManager/src/farmbot"
+	"github.com/FarmbotSimulator/farmbotProxy/config"
+	async "github.com/FarmbotSimulator/farmbotProxy/src/async"
+	"github.com/FarmbotSimulator/farmbotProxy/src/farmbot"
 )
 
 var uptime map[string]uint64
@@ -104,7 +104,6 @@ func mqttConnect() {
 		}
 	}()
 
-	fmt.Println("going to connect")
 	async.Exec(func() interface{} {
 		var connectings = make(map[string]time.Time)
 		for range time.Tick(time.Second * 5) { // try to connect new clients every 2 secs
@@ -224,25 +223,6 @@ func mqttConnect() {
 		// check. Work this well
 		topic := pk.TopicName
 		topicPart := ""
-		// // forward client to simulator
-		// r, _ := regexp.Compile(`^/client`)
-		// for _, match := range r.FindStringSubmatch(topic) {
-		// 	match = strings.Replace(match, `/`+string(cl.Username)+"/", "", -1)
-		// 	match = strings.Replace(match, `/`, "", -1)
-		// 	topicPart = match
-		// 	server.Publish(strings.Replace(topic, "/client", "/simulator", 1), pk.Payload, false)
-		// 	return
-		// }
-		// // forward simulator to client
-		// r, _ = regexp.Compile(`^/client`)
-		// for _, match := range r.FindStringSubmatch(topic) {
-		// 	match = strings.Replace(match, `/`+string(cl.Username)+"/", "", -1)
-		// 	match = strings.Replace(match, `/`, "", -1)
-		// 	topicPart = match
-		// 	server.Publish(strings.Replace(topic, "/client", "/simulator", 1), pk.Payload, false)
-		// 	return
-		// }
-
 		r, _ := regexp.Compile(`^[/]` + string(cl.Username) + `/[^/]+[/]?`) // has either a slash at the end or nothing more
 		for _, match := range r.FindStringSubmatch(topic) {
 			match = strings.Replace(match, `/`+string(cl.Username)+"/", "", -1)

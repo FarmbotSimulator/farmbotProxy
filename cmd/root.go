@@ -12,9 +12,9 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "farmbotsimulator",
-	Short: "Farmbot Simulator Session Manager.",
-	Long: `Farmbot Simulator Session Manager.
+	Use:   "farmbotproxy",
+	Short: "Farmbot Proxy.",
+	Long: `Farmbot Proxy.
 Manages sessions to farmbot backend server
 	`,
 	// Uncomment the following line if your bare application
@@ -40,7 +40,7 @@ func Execute() {
 		// figlet4go.TrueColor{13, 93, 186}, // too many values in struct literal
 	}
 
-	renderStr, _ := ascii.RenderOpts("Farmbot Simulator", options)
+	renderStr, _ := ascii.RenderOpts("Farmbot Proxy", options)
 
 	// options.FontName = "larry3d"
 	fmt.Print(renderStr)

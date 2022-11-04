@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	cfgFile     = "/etc/farmbotsimulator/farmbotsimulator.yaml"
-	cfgDir      = "/etc/farmbotsimulator"
-	cfgFileName = "farmbotsimulator"
+	cfgFile     = "/etc/farmbotproxy/farmbotproxy.yaml"
+	cfgDir      = "/etc/farmbotproxy"
+	cfgFileName = "farmbotproxy"
 	cfgFileExt  = "yaml"
 )
 
@@ -24,7 +24,7 @@ func Config(overwrite bool) error {
 		if overwrite {
 			log.Println("Overwriting config file")
 		}
-		if err := os.MkdirAll("/etc/farmbotsimulator", os.ModePerm); err != nil {
+		if err := os.MkdirAll("/etc/farmbotproxy", os.ModePerm); err != nil {
 			log.Fatal(err)
 		}
 		f, err := os.Create(cfgFile)

@@ -1,14 +1,14 @@
 package cmd
 
 import (
-	"github.com/FarmbotSimulator/FarmbotSessionManager/src/systemd"
+	"github.com/FarmbotSimulator/farmbotProxy/src/systemd"
 	"github.com/spf13/cobra"
 )
 
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "Start farmbotsimulator service",
-	Long:  `Start farmbotsimulator service`,
+	Short: "Start farmbotproxy service",
+	Long:  `Start farmbotproxy service`,
 	Run: func(cmd *cobra.Command, args []string) {
 		production, _ := cmd.Flags().GetBool("prod")
 		systemd.Start(production)

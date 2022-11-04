@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/FarmbotSimulator/FarmbotSessionManager/config"
+	"github.com/FarmbotSimulator/farmbotProxy/config"
 	"github.com/kardianos/service"
 )
 
@@ -103,12 +103,10 @@ func Restart(production bool) {
 	}
 }
 func Install(production bool) {
-	fmt.Println("install")
 	s, err := getService(production)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("install-----")
 	if err = s.Install(); err != nil {
 		if strings.Contains(fmt.Sprint(err), "already exists") {
 			if err := s.Uninstall(); err != nil {

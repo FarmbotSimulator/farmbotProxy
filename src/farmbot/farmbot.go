@@ -8,7 +8,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/FarmbotSimulator/FarmbotSessionManager/config"
+	"github.com/FarmbotSimulator/farmbotProxy/config"
 	"github.com/vicanso/go-axios"
 )
 

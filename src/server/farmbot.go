@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	async "github.com/FarmbotSimulator/FarmbotSessionManager/src/async"
+	async "github.com/FarmbotSimulator/farmbotProxy/src/async"
 	mqtt_ "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -132,9 +132,9 @@ func moveAbsoluteRelative(client mqtt_.Client, botId string, position map[string
 		"z":     z,
 	}
 	tmp, _ := json.Marshal(tmpData)
-	topic := fmt.Sprintf("/simulator/%s/move_relative", botId)
+	topic := fmt.Sprintf("/%s/move_relative", botId)
 	if moveType == "absolute" {
-		topic = fmt.Sprintf("/simulator/%s/move_absolute", botId)
+		topic = fmt.Sprintf("/%s/move_absolute", botId)
 	}
 	server.Publish(topic, tmp, false)
 }
