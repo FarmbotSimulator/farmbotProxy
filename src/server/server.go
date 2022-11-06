@@ -3,7 +3,7 @@ package server
 // _ "github.com/FarmbotSimulator/farmbotProxy/docs"
 
 func Start(production bool) {
-	startMQTT()
+	startMQTT(production)
 	// env := "dev"
 	// if production {
 	// 	env = "prod"
@@ -28,8 +28,8 @@ func Start(production bool) {
 	// }
 }
 
-func startMQTT() {
-	mqttConnect()
+func startMQTT(production bool) {
+	mqttConnect(production)
 	// Exec(func() interface{} {
 	// 	mqttConnect()
 	// 	return nil

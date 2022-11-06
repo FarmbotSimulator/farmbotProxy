@@ -30,6 +30,7 @@ import (
 	mqtt "github.com/csymapp/mqtt/server"
 	"github.com/csymapp/mqtt/server/events"
 	"github.com/csymapp/mqtt/server/listeners"
+	"github.com/csymapp/mqtt/server/listeners/auth"
 	mqtt_ "github.com/eclipse/paho.mqtt.golang"
 	"github.com/logrusorgru/aurora"
 
@@ -50,7 +51,7 @@ var botStatus map[string]interface{}
 var FARMBOTURL string
 var server *mqtt.Server
 
-func mqttConnect() {
+func mqttConnect(production bool) {
 	botStatus = make(map[string]interface{})
 	uptime = make(map[string]uint64)
 	userEnv = make(map[string]interface{})
@@ -72,43 +73,99 @@ func mqttConnect() {
 		done <- true
 	}()
 
-	fmt.Println(aurora.Magenta("Mochi MQTT Server initializing..."), aurora.Cyan("TCP"))
-
-	server = mqtt.NewServer(nil)
-	tcp := listeners.NewTCP("t1", ":1883")
-
-	err := server.AddListener(tcp, &listeners.Config{
-		// Auth: new(auth.Allow),
-		Auth: &Auth{
-			Users:         users,
-			AllowedTopics: allowedTopics,
-		},
-	})
-	if err != nil {
-		log.Fatal(err)
+	env := "dev"
+	if production {
+		env = "prod"
 	}
-	{
-		ws := listeners.NewWebsocket("ws1", ":1882")
-		err := server.AddListener(ws,
-			&listeners.Config{
-				Auth: &Auth{
-					Users:         users,
-					AllowedTopics: allowedTopics,
-				},
-			})
+	portInterface, err := config.GetConfig("PORTDASHBOARD", env)
+	dashboardPort := portInterface.(int)
+	portInterface, err = config.GetConfig("PORTMQTT", env)
+	mqttPort := portInterface.(int)
+	portInterface, err = config.GetConfig("PORTWS", env)
+	wsPort := portInterface.(int)
+	DASHBOARDInterface, _ := config.GetConfig("DASHBOARD")
+	DASHBOARD := DASHBOARDInterface.(bool)
+
+	fmt.Println(aurora.Magenta("Mochi MQTT Server initializing..."), env, aurora.Cyan(fmt.Sprintf("TCP:%v", mqttPort)), aurora.Cyan(fmt.Sprintf("WS:%v", wsPort)))
+	if DASHBOARD {
+		fmt.Println(aurora.Magenta("Mochi MQTT Server initializing..."), env, aurora.Cyan(fmt.Sprintf("DASHBOARD:%v", dashboardPort)))
+	}
+	server = mqtt.NewServer(nil)
+	tcp := listeners.NewTCP("t1", fmt.Sprintf(":%v", mqttPort))
+	domainInterface, _ := config.GetConfig("domain")
+	domain := domainInterface.(string)
+	fullchain, err := os.ReadFile(fmt.Sprintf("/etc/letsencrypt/live/%s/fullchain.pem", domain))
+	privkey, err := os.ReadFile(fmt.Sprintf("/etc/letsencrypt/live/%s/privkey.pem", domain))
+	TLSInterface, _ := config.GetConfig("TLS")
+	TLS := TLSInterface.(bool)
+	if production && TLS {
+		err = server.AddListener(tcp, &listeners.Config{
+			// Auth: new(auth.Allow),
+			Auth: &Auth{
+				Users:         users,
+				AllowedTopics: allowedTopics,
+			},
+			TLS: &listeners.TLS{
+				Certificate: fullchain,
+				PrivateKey:  privkey,
+			},
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		{
+			ws := listeners.NewWebsocket("ws1", fmt.Sprintf(":%v", wsPort))
+			err := server.AddListener(ws,
+				&listeners.Config{
+					Auth: &Auth{
+						Users:         users,
+						AllowedTopics: allowedTopics,
+					},
+					TLS: &listeners.TLS{
+						Certificate: fullchain,
+						PrivateKey:  privkey,
+					},
+				})
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	} else {
+		err = server.AddListener(tcp, &listeners.Config{
+			// Auth: new(auth.Allow),
+			Auth: &Auth{
+				Users:         users,
+				AllowedTopics: allowedTopics,
+			},
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		{
+			ws := listeners.NewWebsocket("ws1", fmt.Sprintf(":%v", dashboardPort))
+			err := server.AddListener(ws,
+				&listeners.Config{
+					Auth: &Auth{
+						Users:         users,
+						AllowedTopics: allowedTopics,
+					},
+				})
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
+	if DASHBOARD {
+		stats := listeners.NewHTTPStats("stats", ":8084")
+		err = server.AddListener(stats, &listeners.Config{
+			Auth: new(auth.Allow),
+			// TLSConfig: tlsConfig,
+		})
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-
-	// stats := listeners.NewHTTPStats("stats", ":8080")
-	// err = server.AddListener(stats, &listeners.Config{
-	// 	Auth: new(auth.Allow),
-	// 	// TLSConfig: tlsConfig,
-	// })
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 
 	// Start the server
 	go func() {

@@ -9,8 +9,19 @@ sshKey: ~/.ssh/gitkey
 PORT: 
   dev: 8001
   prod: 8000
+PORTDASHBOARD: 
+  dev: 8001
+  prod: 8000
+PORTMQTT: 
+  dev: 1884
+  prod: 1883
+PORTWS: 
+  dev: 1881
+  prod: 1882
 update: 86400
-domain: ".."
+TLS: true
+DASHBOARD: true
+domain: "ubuntu.cseco.co.ke"
 scheme: https
 documentation: true
 contacts:

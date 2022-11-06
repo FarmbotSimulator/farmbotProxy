@@ -4,7 +4,9 @@ An mqtt proxy server for farmbot.
 
 ## Table of Contents
 - [Flow Diagram](#flow-diagram)
+- [Prerequisites](#prerequisites)
 - [Usage](#usage)
+- [Configuration](#configuration)
 - [Installation](#installation)
 
 ## Flow Diagram
@@ -63,6 +65,11 @@ class A1,A2,A3,A4,A5,B1,B2,B3,B4,B5,bs_A,bs_B,pU_A borderless
 This proxy server creates a persistent connection to the farmbot server so that there is no need for reconnection every time a client connects. It also hands the publishing of certain data such as logs, etc. This behaviour is especially important when developing applications that require an mqtt connection to the farmbot server/broker. If bugs occur, for instance, the application may be restarted several times during debugging and this may result in it exceeding the rate limit and getting locked out for sometime, thus wasting a lot of time. This proxy broker solves this problem.
 
 Another further use is in implementing billing for farmbot simulator. Refer to the diagram above.
+
+**[⬆ back home](#table-of-contents)**
+
+## Prerequisites
+You need to have ssl certificates. You can generate self signed certificates using [certbot](https://certbot.eff.org/instructions?ws=nginx&os=ubuntufocal). It is assumed that the certificates are in `/etc/letsencrypt/live/{domain}/` which is the default location where certbot saves them. If you are running in a dev environment, however, you do not need to worry about ssl. They will be ignored.
 
 **[⬆ back home](#table-of-contents)**
 
@@ -130,8 +137,25 @@ sudo systemctl status farmbotproxy
 
 **[⬆ back home](#table-of-contents)**
 
+## Configuration
+Websocket listens on the path `/mqtt`
+
+These are the configuration you should edit in `/etc/farmbotproxy/farmbotproxy.yml`
+| Item | Description |
+|------|--------------|
+| FARMBOTURL| url of farmbot server. Default: https://my.farmbot.io/api |
+| domain| domain you are using to host farmbot proxy. The certifites are read from `/etc/letsencrypt/live/%{domain}/", domain`. You can disable tls or run in dev mode if you do not have a domain or certificate |
+| TLS  | If TLS is enabled in production. It cannot be enabled in development.|
+|DASHBOARD | Whether to server dashboard |
+|PORTDASHBOARD | Dashboard port |
+|PORTMQTT | Mqtt port |
+|PORTWS | Websocket port |
+
+**[⬆ back home](#table-of-contents)**
+
 ## Todo
 - [ ] Reading version from config when packaging
+- [ ] checkorigin: provide means of adding in config file. But this requires to be done in [libary](https://github.com/csymapp/mqtt)
 
 ## References
 - [Creating .deb](https://www.internalpointers.com/post/build-binary-deb-package-practical-guide)
