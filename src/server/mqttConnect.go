@@ -92,6 +92,7 @@ func mqttConnect(production bool) {
 	}
 	server = mqtt.NewServer(nil)
 	tcp := listeners.NewTCP("t1", fmt.Sprintf(":%v", mqttPort))
+	ws := listeners.NewWebsocket("ws1", fmt.Sprintf(":%v", wsPort))
 	domainInterface, _ := config.GetConfig("domain")
 	domain := domainInterface.(string)
 	fullchain, err := os.ReadFile(fmt.Sprintf("/etc/letsencrypt/live/%s/fullchain.pem", domain))
@@ -114,7 +115,6 @@ func mqttConnect(production bool) {
 			log.Fatal(err)
 		}
 		{
-			ws := listeners.NewWebsocket("ws1", fmt.Sprintf(":%v", wsPort))
 			err := server.AddListener(ws,
 				&listeners.Config{
 					Auth: &Auth{
@@ -142,7 +142,6 @@ func mqttConnect(production bool) {
 			log.Fatal(err)
 		}
 		{
-			ws := listeners.NewWebsocket("ws1", fmt.Sprintf(":%v", dashboardPort))
 			err := server.AddListener(ws,
 				&listeners.Config{
 					Auth: &Auth{
@@ -157,7 +156,7 @@ func mqttConnect(production bool) {
 	}
 
 	if DASHBOARD {
-		stats := listeners.NewHTTPStats("stats", ":8084")
+		stats := listeners.NewHTTPStats("stats", fmt.Sprintf(":%v", dashboardPort))
 		err = server.AddListener(stats, &listeners.Config{
 			Auth: new(auth.Allow),
 			// TLSConfig: tlsConfig,
