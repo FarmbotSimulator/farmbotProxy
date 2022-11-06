@@ -159,7 +159,10 @@ func mqttConnect(production bool) {
 		stats := listeners.NewHTTPStats("stats", fmt.Sprintf(":%v", dashboardPort))
 		err = server.AddListener(stats, &listeners.Config{
 			Auth: new(auth.Allow),
-			// TLSConfig: tlsConfig,
+			TLS: &listeners.TLS{
+				Certificate: fullchain,
+				PrivateKey:  privkey,
+			},
 		})
 		if err != nil {
 			log.Fatal(err)

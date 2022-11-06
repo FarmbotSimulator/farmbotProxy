@@ -153,6 +153,9 @@ These are the configuration you should edit in `/etc/farmbotproxy/farmbotproxy.y
 
 **[⬆ back home](#table-of-contents)**
 
+## Known Bugs
+1. concurrent map writes
+
 ## Todo
 - [ ] Reading version from config when packaging
 - [ ] checkorigin: provide means of adding in config file. But this requires to be done in [libary](https://github.com/csymapp/mqtt)
