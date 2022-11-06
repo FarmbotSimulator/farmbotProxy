@@ -76,6 +76,7 @@ func mqttConnect() {
 
 	server = mqtt.NewServer(nil)
 	tcp := listeners.NewTCP("t1", ":1883")
+
 	err := server.AddListener(tcp, &listeners.Config{
 		// Auth: new(auth.Allow),
 		Auth: &Auth{
@@ -85,6 +86,19 @@ func mqttConnect() {
 	})
 	if err != nil {
 		log.Fatal(err)
+	}
+	{
+		ws := listeners.NewWebsocket("ws1", ":1882")
+		err := server.AddListener(ws,
+			&listeners.Config{
+				Auth: &Auth{
+					Users:         users,
+					AllowedTopics: allowedTopics,
+				},
+			})
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// stats := listeners.NewHTTPStats("stats", ":8080")
@@ -151,19 +165,19 @@ func mqttConnect() {
 							schedulePublishStatusMessage(client, botId)
 
 							/*
-								waitPeriod := 2.0
-								lastPingTime := time.Now()
+								 waitPeriod := 2.0
+								 lastPingTime := time.Now()
 
-									async.Exec(func() interface{} {
-										for range time.Tick(time.Second * time.Duration(waitPeriod)) {
-											now := time.Now()
-											if (now.Sub(lastPingTime).Seconds()) >= waitPeriod {
-												client.Publish(`bot/`+botId+`/ping`+strconv.Itoa(int(now.Unix())), 0, false, strconv.Itoa(int(now.Unix())))
-												lastPingTime = now
-											}
-										}
-										return nil
-									})
+									 async.Exec(func() interface{} {
+										 for range time.Tick(time.Second * time.Duration(waitPeriod)) {
+											 now := time.Now()
+											 if (now.Sub(lastPingTime).Seconds()) >= waitPeriod {
+												 client.Publish(`bot/`+botId+`/ping`+strconv.Itoa(int(now.Unix())), 0, false, strconv.Itoa(int(now.Unix())))
+												 lastPingTime = now
+											 }
+										 }
+										 return nil
+									 })
 							*/
 						}
 						var connectLostHandler mqtt_.ConnectionLostHandler = func(client mqtt_.Client, err error) {
