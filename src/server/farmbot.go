@@ -67,6 +67,7 @@ func setUserEnv(botId string, body []interface{}) {
 func processRpcRequests(client mqtt_.Client, botId string, messages []interface{}, args map[string]interface{}) {
 	for _, message := range messages {
 		kind := message.(map[string]interface{})["kind"]
+		args_ := message.(map[string]interface{})["args"]
 		switch kind {
 		case "set_user_env":
 			setUserEnv(botId, message.(map[string]interface{})["body"].([]interface{}))
@@ -78,6 +79,34 @@ func processRpcRequests(client mqtt_.Client, botId string, messages []interface{
 		case "move_relative":
 			moveAbsoluteRelative(client, botId, message.(map[string]interface{})["args"].(map[string]interface{}), "relative")
 			break
+		case "home":
+			speed := args_.(map[string]interface{})["speed"].(float64)
+			zeroVal := float64(0)
+			moveAbsoluteRelative(client, botId, map[string]interface{}{"x": zeroVal, "y": zeroVal, "z": zeroVal, "speed": speed}, "home")
+			break
+		case "find_home":
+			speed := args_.(map[string]interface{})["speed"].(float64)
+			zeroVal := float64(0)
+			moveAbsoluteRelative(client, botId, map[string]interface{}{"x": zeroVal, "y": zeroVal, "z": zeroVal, "speed": speed}, "home")
+			break
+		case "emergency_lock":
+			topic := fmt.Sprintf("/%s/emergency_lock", botId)
+			tmp, _ := json.Marshal(message)
+			server.Publish(topic, tmp, false)
+			break
+		case "take_photo":
+			break
+		case "reboot":
+			break
+		case "power_off":
+			break
+		case "factory_reset":
+			break
+		case "read_status":
+			publishStatusMessage(client, botId)
+			break
+		default:
+			fmt.Println(message)
 		}
 	}
 }
@@ -98,7 +127,7 @@ func moveAbsoluteRelative(client mqtt_.Client, botId string, position map[string
 	logDataStr := `{
 		"channels": [],
 		"created_at": "new Date().getTime().toString().slice(0, 10)",
-		"major_version": 10,
+		"major_version": 15,
 		"message": "Farmbot is up and running!",
 		"meta": {
 			"assertion_passed": null,
@@ -115,7 +144,7 @@ func moveAbsoluteRelative(client mqtt_.Client, botId string, position map[string
 	var logData map[string]interface{}
 	json.Unmarshal([]byte(logDataStr), &logData)
 	logData["created_at"] = fmt.Sprintf("%v", time.Now().Unix())
-	if moveType == "absolute" {
+	if moveType == "absolute" || moveType == "home" {
 		logData["message"] = fmt.Sprintf("Moving to (%f,%f,%f)", x, y, z)
 	} else {
 		logData["message"] = fmt.Sprintf("Moving relative to (%f,%f,%f)", x, y, z)
@@ -133,7 +162,7 @@ func moveAbsoluteRelative(client mqtt_.Client, botId string, position map[string
 	}
 	tmp, _ := json.Marshal(tmpData)
 	topic := fmt.Sprintf("/%s/move_relative", botId)
-	if moveType == "absolute" {
+	if moveType == "absolute" || moveType == "home" {
 		topic = fmt.Sprintf("/%s/move_absolute", botId)
 	}
 	server.Publish(topic, tmp, false)
@@ -169,6 +198,8 @@ func monitorDownlinkMessages(client mqtt_.Client, wholeTopic string, message []b
 	// messageStr := string(message)
 	botId := strings.Split(wholeTopic, "/")[1]
 	topic := strings.Split(wholeTopic, "/")[2]
+	// fmt.Println(topic)
+	// fmt.Println(string(message))
 	switch topic {
 	case "ping":
 		sendPingPong(botId, client, string(message))
@@ -197,18 +228,44 @@ func publishGeneralData(client mqtt_.Client, botId string, msgData map[string]in
 	client.Publish(`bot/`+botId+`/`+msgType, 0, false, msgDataStr)
 }
 
+func sendCurrentLocation(client mqtt_.Client, botId string) {
+	x := botStatus[botId].(map[string]float32)["x"]
+	y := botStatus[botId].(map[string]float32)["y"]
+	z := botStatus[botId].(map[string]float32)["z"]
+	speed := 100
+	moveAbsoluteRelative(client, botId, map[string]interface{}{"x": x, "y": y, "z": z, "speed": speed, "immediate": true}, "absolute")
+}
+func updateLocation(client mqtt_.Client, botId string, msgData []byte) {
+	var logData map[string]interface{}
+	json.Unmarshal(msgData, &logData)
+	botStatus[botId].(map[string]float32)["x"] = float32(logData["x"].(float64))
+	botStatus[botId].(map[string]float32)["y"] = float32(logData["y"].(float64))
+	botStatus[botId].(map[string]float32)["z"] = float32(logData["z"].(float64))
+	// publishStatusMessage(client, botId)
+}
+
+func publishFromClient(client mqtt_.Client, botId string, msgData []byte, topic string) {
+	var logData map[string]interface{}
+	json.Unmarshal(msgData, &logData)
+	botStatus[botId].(map[string]float32)["x"] = float32(logData["x"].(float64))
+	botStatus[botId].(map[string]float32)["y"] = float32(logData["y"].(float64))
+	botStatus[botId].(map[string]float32)["z"] = float32(logData["z"].(float64))
+	client.Publish(topic, 0, false, msgData)
+	publishStatusMessage(client, botId)
+}
+
 func schedulePublishLogs(client mqtt_.Client, botId string) {
 	logDataStr := `{
 		"channels": [],
 		"created_at": "new Date().getTime().toString().slice(0, 10)",
-		"major_version": 10,
+		"major_version": 15,
 		"message": "Farmbot is up and running!",
 		"meta": {
 			"assertion_passed": null,
 			"assertion_type": null
 		},
-		"minor_version": 1,
-		"patch_version": 4,
+		"minor_version": 3,
+		"patch_version": 3,
 		"type": "success",
 		"verbosity": 1,
 		"x": "this.location.x",
@@ -226,6 +283,18 @@ func schedulePublishLogs(client mqtt_.Client, botId string) {
 
 //botStatus
 func publishStatusMessage(client mqtt_.Client, botId string) {
+	statusInterval := 10
+	if uptime[botId]-lastStatusTime[botId] < uint64(statusInterval) && lastStatusTime[botId] != 0 {
+		x := botStatus[botId].(map[string]float32)["x"]
+		y := botStatus[botId].(map[string]float32)["y"]
+		z := botStatus[botId].(map[string]float32)["z"]
+		xP := botStatusPrevious[botId].(map[string]float32)["x"]
+		yP := botStatusPrevious[botId].(map[string]float32)["y"]
+		zP := botStatusPrevious[botId].(map[string]float32)["z"]
+		if x == xP && y == yP && z == zP {
+			return
+		}
+	}
 	statusDataStr := `{
 		"configuration": {
 			"arduino_debug_messages": false,
@@ -421,13 +490,16 @@ func publishStatusMessage(client mqtt_.Client, botId string) {
 			LAST_CLIENT_CONNECTED = userEnv[botId].(map[string]interface{})["LAST_CLIENT_CONNECTED"].(string)
 		}
 	}
+	botStatusPrevious[botId].(map[string]float32)["x"] = botStatus[botId].(map[string]float32)["x"]
+	botStatusPrevious[botId].(map[string]float32)["y"] = botStatus[botId].(map[string]float32)["y"]
+	botStatusPrevious[botId].(map[string]float32)["z"] = botStatus[botId].(map[string]float32)["z"]
 	statusData["user_env"].(map[string]interface{})["LAST_CLIENT_CONNECTED"] = LAST_CLIENT_CONNECTED
-
+	lastStatusTime[botId] = uptime[botId]
 	publishGeneralData(client, botId, statusData, "status")
 }
 func schedulePublishStatusMessage(client mqtt_.Client, botId string) {
 	async.Exec(func() interface{} {
-		waitPeriod := 5
+		waitPeriod := 1
 		for range time.Tick(time.Second * time.Duration(waitPeriod)) {
 			publishStatusMessage(client, botId)
 		}

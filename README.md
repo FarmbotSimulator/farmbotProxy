@@ -7,6 +7,7 @@ An mqtt proxy server for farmbot.
 - [Prerequisites](#prerequisites)
 - [Usage](#usage)
 - [Configuration](#configuration)
+- [Topics](#topics)
 - [Installation](#installation)
 
 ## Flow Diagram
@@ -151,6 +152,16 @@ These are the configuration you should edit in `/etc/farmbotproxy/farmbotproxy.y
 |PORTMQTT | Mqtt port |
 |PORTWS | Websocket port |
 
+**[⬆ back home](#table-of-contents)**
+
+## Topics.. from 9pm
+- [ ] Query bot postion on connect
+### Authentication
+
+### Topics
+|topic | Client | Broker | Description|
+|------|--------|--------|------------|
+|      | | | |
 **[⬆ back home](#table-of-contents)**
 
 ## Known Bugs

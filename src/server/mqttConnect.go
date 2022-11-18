@@ -41,6 +41,8 @@ import (
 
 var uptime map[string]uint64
 var userEnv map[string]interface{}
+var clients map[string]mqtt_.Client
+var lastStatusTime map[string]uint64
 var users map[string]string
 var usersOriginal map[string]string
 var tokens map[string]string
@@ -48,13 +50,17 @@ var brokers map[string]string
 var farmbotConnections map[string]string
 var allowedTopics map[string][]string
 var botStatus map[string]interface{}
+var botStatusPrevious map[string]interface{}
 var FARMBOTURL string
 var server *mqtt.Server
 
 func mqttConnect(production bool) {
 	botStatus = make(map[string]interface{})
+	botStatusPrevious = make(map[string]interface{})
 	uptime = make(map[string]uint64)
+	lastStatusTime = make(map[string]uint64)
 	userEnv = make(map[string]interface{})
+	clients = make(map[string]mqtt_.Client)
 	users = make(map[string]string)
 	farmbotConnections = make(map[string]string)
 	usersOriginal = make(map[string]string)
@@ -246,22 +252,18 @@ func mqttConnect(production bool) {
 						opts.OnConnect = connectHandler
 						opts.OnConnectionLost = connectLostHandler
 						client := mqtt_.NewClient(opts)
+						clients[botId] = client
 						connectings[botId] = time.Now()
 						if token := client.Connect(); token.Wait() && token.Error() != nil {
 							fmt.Println("FAILED...")
-							// panic(token.Error())
 						} else {
 							fmt.Println("connected...")
 							farmbotConnections[botId] = botId
+							clients[botId] = client
 						}
 					}()
 				}
 			}
-			// botId := string(cl.Username)
-			// if farmbotConnections[botId] == botId || connectings[botId] == botId {
-			// 	// don't connect if there is already a connection
-			// 	fmt.Println("connection already exists")
-			// }
 		}
 		return nil
 	})
@@ -310,6 +312,29 @@ func mqttConnect(production bool) {
 				// fmt.Println(resp.(string))
 				server.Publish(strings.Replace(topic, "GET", fmt.Sprintf("SET/%s", string(pk.Payload)), -1), []byte(resp.(string)), false)
 			}
+			break
+		case "BOT": // passthrough
+			r, _ := regexp.Compile(`^[/]` + string(cl.Username) + `/BOT/`)
+			var topic_ string
+			for _, match := range r.FindStringSubmatch(topic) {
+				topic_ = strings.Replace(topic, match, "", -1)
+			}
+
+			// fmt.Println(string(pk.Payload))
+			botId := string(cl.Username)
+			fmt.Println(botId)
+
+			if clients[botId] != nil {
+				publishFromClient(clients[botId], botId, pk.Payload, topic_)
+			}
+			break
+		case "LOCATION":
+			botId := string(cl.Username)
+			updateLocation(clients[botId], botId, pk.Payload)
+			break
+		case "CURRENTLOCATION":
+			botId := string(cl.Username)
+			sendCurrentLocation(clients[botId], botId)
 			break
 		}
 
@@ -381,7 +406,11 @@ func (a *Auth) Authenticate(user, password []byte) (interface{}, error) {
 	users[botId] = botId
 	tokens[botId] = token
 	brokers[botId] = broker
+	lastStatusTime[botId] = 0
 	botStatus[botId] = map[string]float32{
+		"x": 0, "y": 0, "z": 0,
+	}
+	botStatusPrevious[botId] = map[string]float32{
 		"x": 0, "y": 0, "z": 0,
 	}
 	uptime[botId] = 0
