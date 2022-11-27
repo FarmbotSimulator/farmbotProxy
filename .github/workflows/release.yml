@@ -5,7 +5,7 @@ name: Release
 on:
   push:
     tags:
-      - "v.*"
+      - "v*"
 
 # jobs
 jobs:
@@ -23,54 +23,38 @@ jobs:
           make debs
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-  create-release:
-    runs-on: ubuntu-latest
-    needs:
-      - build-linux-packages
-    name: Create Release
-      id: create-release
-      steps:
-        - uses: actions/create-release@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          with:
-            tag_name: ${{ env.RELEASE_VERSION }}
-            release_name: ${{ env.RELEASE_VERSION }}
-            body: ${{ github.ref }}
-            draft: false
-            prerelease: false
-        - name: Write upload_url to file
-        run: echo '${{ steps.create-release.outputs.upload_url }}' > upload_url.txt
-  upload-linux-packages:
-    runs-on: ubuntu-latest
-    needs: create-release
-    strategy:
-      matrix:
-        include:
-          - pkg: deb
-            asset_content_type: application/vnd.debian.binary-package
-          - pkg: rpm
-            asset_content_type: application/x-rpm
-    steps:
-      - uses: actions/download-artifact@v3
+      - name: Rename files
+        run: VER=$(echo $RELEASE_VERSION |sed -e "s/v//" | sed -e "$ s/\(.*\)\./\1-/") && for file in ./installer/*.deb; do newFile=$(echo $file |sed -e "s/_1.2-1/_$(echo $VER)/"); mv $file $newFile; done 
+        shell: bash
+      - name: Create Release
+        uses: actions/github-script@v2
         with:
-          name: artifact-${{ matrix.pkg }}
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            console.log('environment', process.versions);
+            
+            const fs = require('fs').promises;
+            
+            const { repo: { owner, repo }, sha } = context;
+            console.log({ owner, repo, sha });
 
-      - uses: actions/download-artifact@v3
-        with:
-          name: create-release
+            const release = await github.repos.createRelease({
+              owner, repo,
+              tag_name: process.env.RELEASE_VERSION,
+              draft: false,
+              target_commitish: sha
+            });
 
-      - id: vars
-        run: |
-          echo "::set-output name=upload_url::$(cat upload_url.txt)"
-          echo "::set-output name=asset_name::$(ls *./installers/${{ matrix.pkg }} | head -n 1)"
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.vars.outputs.upload_url }}
-          asset_path: ${{ steps.vars.outputs.asset_name }}
-          asset_name: ${{ steps.vars.outputs.asset_name }}
-          asset_content_type: ${{ matrix.asset_content_type }}
+            console.log('created release', { release });
+        
+            for (let file of await fs.readdir('./installer')) {
+              console.log('uploading', file);
+              if(file.match(/\.deb$/) === null) continue
+
+              await github.repos.uploadReleaseAsset({
+                owner, repo,
+                release_id: release.data.id,
+                name: file,
+                data: await fs.readFile(`./installer/${file}`)
+              });            
+            }
